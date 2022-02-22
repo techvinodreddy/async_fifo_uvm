@@ -6,6 +6,8 @@ class read_driver extends uvm_driver #(read_packet);
   extern function new(string name = "read_driver", uvm_component parent);
   extern function void build_phase(uvm_phase phase);
   extern function void connect_phase(uvm_phase phase);
+  extern task send_to_dut(read_packet rd_pkt);
+  extern task run_phase(uvm_phase phase);
 
 endclass : read_driver
 
@@ -23,3 +25,22 @@ endfunction : build_phase
 function void read_driver::connect_phase(uvm_phase phase);
   vif = rd_agt_cfg.vif;
 endfunction : connect_phase
+
+task read_driver::send_to_dut(read_packet rd_pkt);
+  @(vif.rd_drv_cb);
+  vif.rd_drv_cb.rrstn <= rd_pkt.rrstn;
+  vif.rd_drv_cb.rinc  <= rd_pkt.rinc;
+
+  $display("data sent to duv from read driver");
+
+  seq_item_port.put_response(rd_pkt);
+endtask
+
+task read_driver::run_phase(uvm_phase phase);
+  forever 
+    begin
+      seq_item_port.get_next_item(req);
+      send_to_dut(req);
+      seq_item_port.item_done;
+    end
+endtask

@@ -9,6 +9,8 @@ class write_monitor extends uvm_monitor;
   extern function new(string name = "write_monitor", uvm_component parent);
   extern function void build_phase(uvm_phase phase);
   extern function void connect_phase(uvm_phase phase);
+  extern task write_collect_data();
+  extern task run_phase(uvm_phase phase);
 endclass : write_monitor
 
 function write_monitor::new(string name = "write_monitor", uvm_component parent);
@@ -26,3 +28,25 @@ endfunction : build_phase
 function void write_monitor::connect_phase(uvm_phase phase);
   vif = wr_agt_cfg.vif;
 endfunction : connect_phase
+
+task read_monitor::write_collect_data();
+  @(vif.rd_mon_cb);
+  wr_pkt.rrstn   = vif.wr_mon_cb.wrstn;
+  wr_pkt.rinc    = vif.wr_mon_cb.winc;
+  wr_pkt.rdata   = vif.wr_mon_cb.wdata;
+  wr_pkt.wfull   = vif.wr_mon_cb.wfull;
+  wr_pkt.awfull  = vif.wr_mon_cb.awfull;
+  wr_pkt.rempty  = vif.wr_mon_cb.rempty;
+  wr_pkt.arempty = vif.wr_mon_cb.arempty;
+
+  `uvm_info(get_type_name(), "read data recevied from duv \n %s", rd_pkt.sprint(), UVM_LOW)
+  read_monitor_analysis_port.write(rd_pkt);
+
+endtask : write_collect_data
+
+task read_monitor::run_phase(uvm_phase phase);
+  wr_pkt = write_packet::type_id::create("wr_pkt");
+
+  forever
+    write_collect_data();
+endtask : run_phase
