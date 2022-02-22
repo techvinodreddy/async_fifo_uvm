@@ -6,6 +6,8 @@ class write_driver extends uvm_driver #(write_packet);
   extern function new(string name = "write_driver", uvm_component parent);
   extern function void build_phase(uvm_phase phase);
   extern function void connect_phase(uvm_phase phase);
+  extern task send_to_dut(write_packet wr_pkt);
+  extern task run_phase(uvm_phase phase);
 
 endclass : write_driver
 
@@ -23,3 +25,23 @@ endfunction : build_phase
 function void write_driver::connect_phase(uvm_phase phase);
   vif = wr_agt_cfg.vif;
 endfunction : connect_phase
+
+task write_driver::send_to_dut(write_packet wr_pkt);
+  @(vif.wr_drv_cb);
+  vif.wr_drv_cb.wrstn <= wr_pkt.wrstn;
+  vif.wr_drv_cb.winc  <= wr_pkt.winc;
+  vif.wr_drv_cb.wdata  <= wr_pkt.wdata;
+
+  $display("data sent to duv from write driver");
+
+  seq_item_port.put_response(wr_pkt);
+endtask
+
+task write_driver::run_phase(uvm_phase phase);
+  forever 
+    begin
+      seq_item_port.get_next_item(req);
+      send_to_dut(req);
+      seq_item_port.item_done;
+    end
+endtask
